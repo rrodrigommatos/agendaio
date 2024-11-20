@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Agenda.io</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <img src="/static/assets/logo.png" alt="Agenda.io Logo" class="logo">
+        <div class="header">
+            <div class="title">
+                <h2>Acessar seu negócio</h2>
+                <p>Organize suas demandas</p>
+            </div>
+        </div>
+
+        <!-- Input de CPF/CNPJ -->
+        <label for="cpfCnpj">CPF/CNPJ</label>
+        <input type="text" id="cpfCnpj" placeholder="CPF do dono do negócio/CNPJ da empresa?"
+            oninput="mascaraCpfCnpj(this)" maxlength="18" onkeydown="submitOnEnter(event)">
+
+        <div id="senhaContainer" style="display: none;">
+            <label for="senha">Senha</label>
+            <div class="senha-wrapper" style="display: flex; align-items: center;">
+                <input type="password" id="senha" placeholder="Digite sua senha">
+                <span id="eyeIcon" onclick="toggleSenhaVisibilidade()" style="cursor: pointer; margin-left: 10px;">
+                    <img id="eyeImg" src="/static/assets/eye-closed.png" alt="Mostrar senha"
+                        style="width: 20px; height: 20px;">
+                </span>
+            </div>
+        </div>
+
+
+        <!-- Botões -->
+        <button id="avancarBtn" onclick="verificarCpfCnpj()">Avançar</button>
+        <br>
+        <button id="acessarBtn" style="display: none;" onclick="acessar()">Acessar</button>
+        <button id="voltarBtn" style="display: none;" onclick="voltar()">Voltar</button>
+
+        <p id="mensagem" style="color: red; font-size: 0.85em; margin-top: 10px;"></p>
+    </div>
+
+    <div id="toast" class="toast">Usuário não encontrado. Redirecionando para a tela de cadastro.</div>
+
+    <!-- Scripts -->
+    <script>
+        async function verificarCpfCnpj() {
+            let cpfCnpj = document.getElementById('cpfCnpj').value;
+            const mensagem = document.getElementById('mensagem');
+            mensagem.textContent = '';
+
+            // Remove todos os caracteres que não são dígitos (mantendo apenas os números)
+            cpfCnpj = cpfCnpj.replace(/\D/g, '');
+
+            if (!cpfCnpj) {
+                showToast('Por favor, insira o CPF ou CNPJ.');
+                return;
+            }
+
+            // Validação do CPF se tiver 11 dígitos
+            if (cpfCnpj.length === 11 && !validarCPF(cpfCnpj)) {
+                showToast('CPF inválido. Verifique e tente novamente.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/verificar_cpf_cnpj', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ cpf_cnpj: cpfCnpj }),
+                });
+
+                const data = await response.json();
+
+                if (data.existe) {
+                    // Bloqueia o CPF/CNPJ, aplica a máscara e muda a cor do campo
+                    document.getElementById('cpfCnpj').value = formatarCpfCnpj(cpfCnpj);
+                    document.getElementById('cpfCnpj').disabled = true;
+                    document.getElementById('cpfCnpj').classList.add('blocked');
+                    document.getElementById('senhaContainer').style.display = 'block';
+                    document.getElementById('avancarBtn').style.display = 'none';
+                    document.getElementById('voltarBtn').style.display = 'inline-block';
+                    document.getElementById('acessarBtn').style.display = 'inline-block';
+                } else {
+                    window.location.href = `/register?cpf_cnpj=${cpfCnpj}`;
+                    showToast('Usuário não encontrado. Redirecionando para a tela de cadastro.');
+                }
+            } catch (error) {
+                showToast('Erro ao verificar CPF/CNPJ. Tente novamente mais tarde.');
+            }
+        }
+
+
+        function voltar() {
+            document.getElementById('cpfCnpj').disabled = false;
+            document.getElementById('cpfCnpj').classList.remove('blocked');
+            document.getElementById('senhaContainer').style.display = 'none';
+            document.getElementById('avancarBtn').style.display = 'inline-block';
+            document.getElementById('voltarBtn').style.display = 'none';
+            document.getElementById('acessarBtn').style.display = 'none';
+            document.getElementById('cpfCnpj').value = '';
+            document.getElementById('senha').value = '';
+        }
+
+        function validarCPF(cpf) {
+            // Remove caracteres que não sejam números
+            cpf = cpf.replace(/\D/g, '');
+
+            // Verifica se o CPF tem 11 dígitos ou é uma sequência repetida
+            if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) {
+                return false;
+            }
+
+            // Validação do primeiro dígito verificador
+            let soma = 0;
+            for (let i = 0; i < 9; i++) {
+                soma += parseInt(cpf[i]) * (10 - i);
+            }
+            let resto = soma % 11;
+            let primeiroDigitoVerificador = resto < 2 ? 0 : 11 - resto;
+
+            if (parseInt(cpf[9]) !== primeiroDigitoVerificador) {
+                return false;
+            }
+
+            // Validação do segundo dígito verificador
+            soma = 0;
+            for (let i = 0; i < 10; i++) {
+                soma += parseInt(cpf[i]) * (11 - i);
+            }
+            resto = soma % 11;
+            let segundoDigitoVerificador = resto < 2 ? 0 : 11 - resto;
+
+            if (parseInt(cpf[10]) !== segundoDigitoVerificador) {
+                return false;
+            }
+
+            return true;
+        }
+
+
+        function submitOnEnter(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Impede o comportamento padrão do Enter
+
+                // Verifica qual campo está ativo
+                const senhaContainer = document.getElementById('senhaContainer');
+                if (senhaContainer.style.display === 'block') {
+                    acessar(); // Chama a função acessar() se o campo de senha está visível
+                } else {
+                    verificarCpfCnpj(); // Chama verificarCpfCnpj() se está na primeira etapa
+                }
+            }
+        }
+
+
+        function acessar() {
+            const senha = document.getElementById('senha').value;
+            if (!senha) {
+                showToast('Por favor, insira a senha.');
+                return;
+            }
+            showToast('Autenticando...');
+        }
+
+        function toggleSenhaVisibilidade() {
+            const senhaInput = document.getElementById('senha');
+            const eyeImg = document.getElementById('eyeImg');
+
+            if (senhaInput.type === 'password') {
+                senhaInput.type = 'text';
+                eyeImg.src = '/static/assets/eye-open.png'; // Alterar para ícone de "olho fechado"
+                eyeImg.alt = 'Ocultar senha'; // Descrição para acessibilidade
+            } else {
+                senhaInput.type = 'password';
+                eyeImg.src = '/static/assets/eye-closed.png'; // Alterar para ícone de "olho aberto"
+                eyeImg.alt = 'Mostrar senha'; // Descrição para acessibilidade
+            }
+        }
+
+        function mascaraCpfCnpj(input) {
+            let value = input.value.replace(/\D/g, '');
+            input.value = formatarCpfCnpj(value);
+        }
+
+        function formatarCpfCnpj(value) {
+            if (value.length <= 11) {
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            } else {
+                value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                value = value.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+            }
+            return value;
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.className = "toast show";
+            setTimeout(() => {
+                toast.className = "toast";
+            }, 3000);
+        }
+    </script>
+</body>
+
+</html>

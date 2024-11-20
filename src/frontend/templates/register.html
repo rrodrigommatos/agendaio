@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar - Agenda.io</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+
+<body>
+    <div class="container">
+
+        <img src="/static/assets/logo.png" alt="Agenda.io Logo" class="logo">
+        <div class="header">
+            <div class="title">
+                <h2>Criar Conta</h2>
+                <p>Insira suas informações para se registrar</p>
+            </div>
+        </div>
+
+        <!-- CPF/CNPJ -->
+        <label for="cpfCnpj">CPF/CNPJ</label>
+        <input type="text" id="cpfCnpj" readonly class="blocked">
+
+        <!-- E-mail -->
+        <label for="email">E-mail</label>
+        <input type="email" id="email" placeholder="Digite seu e-mail" required>
+        <p id="emailErro" class="error"></p>
+
+        <!-- Telefone -->
+        <label for="telefone">Telefone</label>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <select id="ddi">
+                <option value="+55" selected>+55 (Brasil)</option>
+                <option value="+1">+1 (EUA)</option>
+                <option value="+44">+44 (Reino Unido)</option>
+                <option value="+91">+91 (Índia)</option>
+                <option value="+81">+81 (Japão)</option>
+                <option value="+86">+86 (China)</option>
+                <option value="+49">+49 (Alemanha)</option>
+                <option value="+33">+33 (França)</option>
+                <option value="+39">+39 (Itália)</option>
+                <option value="+7">+7 (Rússia)</option>
+                <option value="+61">+61 (Austrália)</option>
+                <option value="+64">+64 (Nova Zelândia)</option>
+                <option value="+27">+27 (África do Sul)</option>
+                <!-- Adicione mais opções conforme necessário -->
+            </select>
+            <input type="text" id="telefone" placeholder="Digite seu telefone" oninput="mascaraTelefone(this)" maxlength="15" required>
+        </div>
+        <p id="telefoneErro" class="error"></p>
+
+        <!-- Nova senha -->
+        <label for="novaSenha">Nova Senha</label>
+        <input type="password" id="novaSenha" placeholder="Digite sua senha" required>
+
+        <!-- Confirmação de senha -->
+        <label for="confirmarSenha">Confirmar Senha</label>
+        <input type="password" id="confirmarSenha" placeholder="Confirme sua senha" required>
+        <p id="senhaErro" class="error"></p>
+
+        <!-- Botões -->
+        <button id="registrarBtn" onclick="registrar()">Registrar</button>
+        <button id="voltarBtn" class="voltarBtn" onclick="voltarParaLogin()">Voltar</button>
+    </div>
+
+    <script>
+        document.getElementById('ddi').addEventListener('input', function () {
+            const select = document.getElementById('ddi');
+            const searchTerm = select.value.toLowerCase();
+            const options = select.options;
+
+            // Procura o valor no texto ou no valor do option
+            for (let i = 0; i < options.length; i++) {
+                const optionText = options[i].textContent.toLowerCase();
+                const optionValue = options[i].value;
+
+                if (optionText.includes(searchTerm) || optionValue.includes(searchTerm)) {
+                    select.selectedIndex = i; // Seleciona a opção correspondente
+                    break;
+                }
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cpfCnpj = urlParams.get('cpf_cnpj');
+            const cpfCnpjInput = document.getElementById('cpfCnpj');
+
+            if (cpfCnpj) {
+                cpfCnpjInput.value = cpfCnpj;
+                mascaraCpfCnpj(cpfCnpjInput); // Aplica a máscara no valor carregado
+            }
+        });
+
+        function validarEmail() {
+            const email = document.getElementById('email');
+            const emailErro = document.getElementById('emailErro');
+            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!regex.test(email.value)) {
+                emailErro.textContent = 'E-mail inválido.';
+                email.classList.add('error-border');
+                return false;
+            } else {
+                emailErro.textContent = '';
+                email.classList.remove('error-border');
+                return true;
+            }
+        }
+
+        function mascaraTelefone(input) {
+            let value = input.value.replace(/\D/g, '');
+            value = value.replace(/(\d{2})(\d)/, '($1) $2');
+            value = value.replace(/(\d{4,5})(\d{4})$/, '$1-$2');
+            input.value = value;
+        }
+
+        function validarCamposObrigatorios() {
+            let valido = true;
+
+            const email = document.getElementById('email');
+            const telefone = document.getElementById('telefone');
+            const novaSenha = document.getElementById('novaSenha');
+            const confirmarSenha = document.getElementById('confirmarSenha');
+
+            if (!email.value || !validarEmail()) {
+                valido = false;
+            }
+
+            if (!telefone.value || telefone.value.replace(/\D/g, '').length < 10) {
+                document.getElementById('telefoneErro').textContent = 'Telefone é obrigatório e deve conter ao menos 9 dígitos.';
+                telefone.classList.add('error-border');
+                valido = false;
+            } else {
+                document.getElementById('telefoneErro').textContent = '';
+                telefone.classList.remove('error-border');
+            }
+
+            if (!novaSenha.value || !confirmarSenha.value) {
+                document.getElementById('senhaErro').textContent = 'Senha e confirmação são obrigatórias.';
+                novaSenha.classList.add('error-border');
+                confirmarSenha.classList.add('error-border');
+                valido = false;
+            } else if (novaSenha.value !== confirmarSenha.value) {
+                document.getElementById('senhaErro').textContent = 'As senhas não coincidem.';
+                novaSenha.classList.add('error-border');
+                confirmarSenha.classList.add('error-border');
+                valido = false;
+            } else {
+                document.getElementById('senhaErro').textContent = '';
+                novaSenha.classList.remove('error-border');
+                confirmarSenha.classList.remove('error-border');
+            }
+
+            return valido;
+        }
+
+        function mascaraCpfCnpj(input) {
+            let value = input.value.replace(/\D/g, '');
+            input.value = formatarCpfCnpj(value);
+        }
+
+        function formatarCpfCnpj(value) {
+            if (value.length <= 11) {
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            } else {
+                value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+                value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                value = value.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+            }
+            return value;
+        }
+
+        async function registrar() {
+            if (!validarCamposObrigatorios()) return;
+
+            const cpfCnpj = document.getElementById('cpfCnpj').value;
+            const email = document.getElementById('email').value;
+            const telefone = document.getElementById('telefone').value;
+            const ddi = document.getElementById('ddi').value;
+            const senha = document.getElementById('novaSenha').value;
+
+            try {
+                const response = await fetch('/registrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cpf_cnpj: cpfCnpj,
+                        email,
+                        telefone: ddi + telefone.replace(/\D/g, ''),
+                        senha,
+                    }),
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Registro concluído com sucesso!');
+                    window.location.href = '/';
+                } else {
+                    alert(result.error || 'Erro ao registrar.');
+                }
+            } catch (error) {
+                alert('Erro ao se conectar ao servidor.');
+            }
+        }
+
+        function voltarParaLogin() {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+
+</html>
